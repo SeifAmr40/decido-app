@@ -5,13 +5,13 @@ import { ArrowRight, Users, MapPin, Sparkles } from "lucide-react";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Citrus — Swipe on places with friends" },
+      { title: "Decido — Swipe on places with friends" },
       {
         name: "description",
         content:
           "Create a room, invite friends, and swipe on real places nearby until you all match. Warm, fast, delightful.",
       },
-      { property: "og:title", content: "Citrus — Swipe on places with friends" },
+      { property: "og:title", content: "Decido — Swipe on places with friends" },
       {
         property: "og:description",
         content: "Decide where to go, together. Real-time swiping on real places.",
@@ -43,7 +43,7 @@ function Landing() {
               <span className="text-primary italic">Swipe</span> on real places.
             </h1>
             <p className="mt-6 max-w-lg text-lg text-muted-foreground">
-              Citrus turns "where should we eat?" into a game. Create a room, invite
+              Decido turns "where should we eat?" into a game. Create a room, invite
               your people, and swipe on real spots nearby until you all match — in
               real time.
             </p>
@@ -100,7 +100,7 @@ function Landing() {
       </section>
 
       <footer className="border-t border-border/60 py-8 text-center text-sm text-muted-foreground">
-        Made with <span className="text-primary">♥</span> — Citrus, 2026
+        Made with <span className="text-primary">♥</span> — Decido, 2026
       </footer>
     </div>
   );

@@ -12,8 +12,8 @@ import { Loader2 } from "lucide-react";
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
-      { title: "Sign in — Citrus" },
-      { name: "description", content: "Sign in to Citrus to start swiping on places with friends." },
+      { title: "Sign in — Decido" },
+      { name: "description", content: "Sign in to Decido to start swiping on places with friends." },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -48,7 +48,7 @@ function AuthPage() {
           },
         });
         if (error) throw error;
-        toast.success("Welcome to Citrus! Check your email if confirmation is required.");
+        toast.success("Welcome to Decido! Check your email if confirmation is required.");
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
@@ -90,7 +90,7 @@ function AuthPage() {
               Real places. Real friends. Real-time swiping until you all match.
             </p>
           </div>
-          <p className="text-sm text-citrus-cream/70">© Citrus 2026</p>
+          <p className="text-sm text-citrus-cream/70">© Decido 2026</p>
         </div>
       </div>
 
@@ -101,7 +101,7 @@ function AuthPage() {
             {mode === "signin" ? "Welcome back" : "Create your account"}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {mode === "signin" ? "Sign in to your Citrus room." : "Just a few details to get started."}
+            {mode === "signin" ? "Sign in to your Decido room." : "Just a few details to get started."}
           </p>
 
           <Button
@@ -129,7 +129,7 @@ function AuthPage() {
             )}
             <div className="space-y-1.5">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@citrus.app" />
+              <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@decido.app" />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="password">Password</Label>

@@ -6,7 +6,7 @@ import { Heart, MapPin, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/favorites")({
-  head: () => ({ meta: [{ title: "Favorites — Citrus" }] }),
+  head: () => ({ meta: [{ title: "Favorites — Decido" }] }),
   component: FavoritesPage,
 });
 

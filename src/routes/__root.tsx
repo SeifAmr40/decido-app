@@ -84,14 +84,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Citrus — Swipe on places with friends" },
+      { title: "Decido — Swipe on places with friends" },
       {
         name: "description",
         content:
           "Citrus is a warm, playful way to decide where to eat, drink, or wander with friends. Swipe together, match instantly, save favorites.",
       },
       { name: "author", content: "Citrus" },
-      { property: "og:title", content: "Citrus — Swipe on places with friends" },
+      { property: "og:title", content: "Decido — Swipe on places with friends" },
       {
         property: "og:description",
         content: "Create a room, swipe on real places nearby, and match on where to go — together.",

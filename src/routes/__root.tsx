@@ -88,9 +88,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         name: "description",
         content:
-          "Citrus is a warm, playful way to decide where to eat, drink, or wander with friends. Swipe together, match instantly, save favorites.",
+          "Decido is a warm, playful way to decide where to eat, drink, or wander with friends. Swipe together, match instantly, save favorites.",
       },
-      { name: "author", content: "Citrus" },
+      { name: "author", content: "Decido" },
       { property: "og:title", content: "Decido — Swipe on places with friends" },
       {
         property: "og:description",

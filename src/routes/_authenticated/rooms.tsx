@@ -12,7 +12,7 @@ import { Plus, LogIn, Loader2, Users, MapPin } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/_authenticated/rooms")({
-  head: () => ({ meta: [{ title: "Rooms — Citrus" }] }),
+  head: () => ({ meta: [{ title: "Rooms — Decido" }] }),
   component: RoomsPage,
 });
 

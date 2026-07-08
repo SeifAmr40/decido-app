@@ -5,7 +5,7 @@ export function CitrusMark({ className = "" }: { className?: string }) {
         <span className="absolute inset-1 rounded-full bg-citrus-cream/30" />
         <span className="relative font-serif text-citrus-cream leading-none">c</span>
       </span>
-      <span className="font-script text-2xl leading-none text-primary">Citrus</span>
+      <span className="font-script text-2xl leading-none text-primary">Decido</span>
     </span>
   );
 }

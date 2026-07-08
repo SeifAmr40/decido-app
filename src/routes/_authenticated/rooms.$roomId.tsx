@@ -13,7 +13,7 @@ import { Copy, Heart, X, MapPin, Star, Users, PartyPopper, Loader2, Sparkles } f
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/_authenticated/rooms/$roomId")({
-  head: () => ({ meta: [{ title: "Room — Citrus" }] }),
+  head: () => ({ meta: [{ title: "Room — Decido" }] }),
   component: RoomPage,
 });
 

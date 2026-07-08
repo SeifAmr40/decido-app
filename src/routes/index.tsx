@@ -70,7 +70,7 @@ function Landing() {
               <div className="absolute inset-0 rotate-[3deg] rounded-3xl bg-sunset shadow-citrus" />
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="p-8 text-center">
-                  <p className="font-script text-6xl text-citrus-cream drop-shadow-md">Citrus</p>
+                  <p className="font-script text-6xl text-citrus-cream drop-shadow-md">Decido</p>
                   <p className="mt-2 font-serif text-2xl text-citrus-cream/90">
                     tangy decisions,<br />sweeter together
                   </p>

@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as RRoomIdRouteImport } from './routes/r.$roomId'
 import { Route as ApiPublicPlacePhotoSplatRouteImport } from './routes/api/public/place-photo.$'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
@@ -23,6 +24,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RRoomIdRoute = RRoomIdRouteImport.update({
+  id: '/r/$roomId',
+  path: '/r/$roomId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicPlacePhotoSplatRoute =
   ApiPublicPlacePhotoSplatRouteImport.update({
     id: '/api/public/place-photo/$',
@@ -33,30 +39,39 @@ const ApiPublicPlacePhotoSplatRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/r/$roomId': typeof RRoomIdRoute
   '/api/public/place-photo/$': typeof ApiPublicPlacePhotoSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/r/$roomId': typeof RRoomIdRoute
   '/api/public/place-photo/$': typeof ApiPublicPlacePhotoSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/r/$roomId': typeof RRoomIdRoute
   '/api/public/place-photo/$': typeof ApiPublicPlacePhotoSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/sitemap.xml' | '/api/public/place-photo/$'
+  fullPaths: '/' | '/sitemap.xml' | '/r/$roomId' | '/api/public/place-photo/$'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/sitemap.xml' | '/api/public/place-photo/$'
-  id: '__root__' | '/' | '/sitemap.xml' | '/api/public/place-photo/$'
+  to: '/' | '/sitemap.xml' | '/r/$roomId' | '/api/public/place-photo/$'
+  id:
+    | '__root__'
+    | '/'
+    | '/sitemap.xml'
+    | '/r/$roomId'
+    | '/api/public/place-photo/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  RRoomIdRoute: typeof RRoomIdRoute
   ApiPublicPlacePhotoSplatRoute: typeof ApiPublicPlacePhotoSplatRoute
 }
 
@@ -76,6 +91,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/r/$roomId': {
+      id: '/r/$roomId'
+      path: '/r/$roomId'
+      fullPath: '/r/$roomId'
+      preLoaderRoute: typeof RRoomIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/place-photo/$': {
       id: '/api/public/place-photo/$'
       path: '/api/public/place-photo/$'
@@ -89,6 +111,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  RRoomIdRoute: RRoomIdRoute,
   ApiPublicPlacePhotoSplatRoute: ApiPublicPlacePhotoSplatRoute,
 }
 export const routeTree = rootRouteImport

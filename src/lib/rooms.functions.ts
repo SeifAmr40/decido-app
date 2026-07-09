@@ -100,10 +100,8 @@ export const createRoom = createServerFn({ method: "POST" })
     if (roomErr) throw roomErr;
 
     const rows = payload.places.map((p) => {
-      const photoName = p.photos?.[0]?.name;
-      const photoUrl = photoName
-        ? `${GATEWAY_URL}/places/v1/${photoName}/media?maxWidthPx=800&key=x`
-        : null;
+      const photoName = p.photos?.[0]?.name; // "places/PID/photos/PREF"
+      const photoUrl = photoName ? `/api/public/place-photo/${photoName}?w=800` : null;
       return {
         room_id: room.id,
         google_place_id: p.id,

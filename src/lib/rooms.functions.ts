@@ -32,7 +32,14 @@ async function placesTextSearch(query: string) {
       "X-Goog-FieldMask":
         "places.id,places.displayName,places.formattedAddress,places.location,places.rating,places.priceLevel,places.photos,places.primaryType",
     },
-    body: JSON.stringify({ textQuery: query, maxResultCount: 20 }),
+    body: JSON.stringify({
+      // Keep results inside Egypt unless the host already named the country.
+      textQuery: /egypt/i.test(query) ? query : `${query}, Egypt`,
+      maxResultCount: 20,
+      regionCode: "EG",
+      languageCode: "en",
+    }),
+
   });
 
   if (!res.ok) {

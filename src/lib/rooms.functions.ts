@@ -209,3 +209,72 @@ export const getRoomState = createServerFn({ method: "POST" })
       matches: matchesRes.data ?? [],
     };
   });
+
+// ── sendMessage ───────────────────────────────────────────────────────────
+// Room chat. Membership is verified server-side before anything is written.
+export const sendMessage = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        roomId: z.string().uuid(),
+        guestId: z.string().uuid(),
+        body: z.string().trim().min(1).max(1000),
+        name: z.string().trim().max(40).optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    const supabase = await getAdmin();
+
+    const { data: member } = await supabase
+      .from("participants")
+      .select("id")
+      .eq("room_id", data.roomId)
+      .eq("user_id", data.guestId)
+      .maybeSingle();
+    if (!member) throw new Error("Not a member of this room");
+
+    const { error } = await supabase.from("messages").insert({
+      room_id: data.roomId,
+      sender_id: data.guestId,
+      sender_name: data.name?.slice(0, 40) || null,
+      body: data.body,
+    });
+    if (error) throw error;
+    return { ok: true };
+  });
+
+// ── getRoomMessages ───────────────────────────────────────────────────────
+export const getRoomMessages = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z.object({ roomId: z.string().uuid(), guestId: z.string().uuid() }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    const supabase = await getAdmin();
+
+    const { data: member } = await supabase
+      .from("participants")
+      .select("id")
+      .eq("room_id", data.roomId)
+      .eq("user_id", data.guestId)
+      .maybeSingle();
+    if (!member) throw new Error("Not a member of this room");
+
+    const { data: rows, error } = await supabase
+      .from("messages")
+      .select("id, sender_id, sender_name, body, created_at")
+      .eq("room_id", data.roomId)
+      .order("created_at", { ascending: true })
+      .limit(200);
+    if (error) throw error;
+
+    return {
+      messages: (rows ?? []).map((m) => ({
+        id: m.id,
+        body: m.body,
+        createdAt: m.created_at,
+        senderName: m.sender_name,
+        mine: m.sender_id === data.guestId,
+      })),
+    };
+  });

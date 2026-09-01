@@ -32,7 +32,19 @@ async function placesTextSearch(query: string) {
       "X-Goog-FieldMask":
         "places.id,places.displayName,places.formattedAddress,places.location,places.rating,places.priceLevel,places.photos,places.primaryType",
     },
-    body: JSON.stringify({ textQuery: query, maxResultCount: 20 }),
+    body: JSON.stringify({
+      textQuery: query,
+      maxResultCount: 20,
+      // Bias results to Egypt
+      regionCode: "EG",
+      languageCode: "en",
+      locationBias: {
+        circle: {
+          center: { latitude: 26.8206, longitude: 30.8025 },
+          radius: 50000.0,
+        },
+      },
+    }),
   });
 
   if (!res.ok) {

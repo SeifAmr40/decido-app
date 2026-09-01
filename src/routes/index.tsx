@@ -94,7 +94,7 @@ function Landing() {
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="e.g. cozy ramen in Williamsburg"
+              placeholder="e.g. koshary in Downtown Cairo"
               className="w-full bg-transparent py-3.5 text-base text-foreground placeholder:text-muted-foreground focus:outline-none"
               autoFocus
               aria-label="Search Google Maps for a place"
@@ -124,10 +124,10 @@ function Landing() {
         {/* Chip suggestions */}
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           {[
-            "sushi in Soho",
-            "rooftop bars in Athens",
-            "specialty coffee near me",
-            "vegan brunch Berlin",
+            "koshary in Downtown Cairo",
+            "seafood in Alexandria",
+            "Nile view rooftops in Zamalek",
+            "specialty coffee in Maadi",
           ].map((s) => (
             <button
               key={s}

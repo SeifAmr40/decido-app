@@ -1,9 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { joinRoom, recordSwipe } from "@/lib/rooms.functions";
+import { joinRoom, recordSwipe, getRoomState } from "@/lib/rooms.functions";
 import { getGuestId } from "@/lib/guest";
 import { CitrusMark } from "@/components/citrus-mark";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -12,6 +11,7 @@ import confetti from "canvas-confetti";
 import { motion, AnimatePresence } from "framer-motion";
 import { Copy, Heart, X, MapPin, Star, Users, PartyPopper, Share2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+
 
 export const Route = createFileRoute("/r/$roomId")({
   head: () => ({

@@ -41,100 +41,54 @@ function RoomPage() {
   const queryClient = useQueryClient();
   const joinFn = useServerFn(joinRoom);
   const swipeFn = useServerFn(recordSwipe);
+  const stateFn = useServerFn(getRoomState);
   const [guestId, setGuestId] = useState<string>("");
+  const [joined, setJoined] = useState(false);
   const [matchDialog, setMatchDialog] = useState<Place | null>(null);
+  const seenMatches = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     const id = getGuestId();
     setGuestId(id);
-    joinFn({ data: { roomId, guestId: id } }).catch(() => {});
+    joinFn({ data: { roomId, guestId: id } })
+      .catch(() => {})
+      .finally(() => setJoined(true));
   }, [roomId, joinFn]);
 
-  const roomQ = useQuery({
-    queryKey: ["room", roomId],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("rooms").select("*").eq("id", roomId).single();
-      if (error) throw error;
-      return data;
-    },
+  const stateQ = useQuery({
+    queryKey: ["roomState", roomId, guestId],
+    enabled: !!guestId && joined,
+    refetchInterval: 3000,
+    queryFn: () => stateFn({ data: { roomId, guestId } }),
   });
 
-  const participantsQ = useQuery({
-    queryKey: ["participants", roomId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("participants")
-        .select("user_id, joined_at")
-        .eq("room_id", roomId);
-      if (error) throw error;
-      return data;
-    },
-  });
+  const room = stateQ.data?.room;
+  const places = (stateQ.data?.places ?? []) as Place[];
+  const matches = stateQ.data?.matches ?? [];
+  const participantCount = stateQ.data?.participantCount ?? 0;
 
-  const placesQ = useQuery({
-    queryKey: ["places", roomId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("places")
-        .select("*")
-        .eq("room_id", roomId)
-        .order("created_at");
-      if (error) throw error;
-      return data as Place[];
-    },
-  });
-
-  const swipesQ = useQuery({
-    queryKey: ["mySwipes", roomId, guestId],
-    enabled: !!guestId,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("swipes")
-        .select("place_id")
-        .eq("room_id", roomId)
-        .eq("user_id", guestId);
-      if (error) throw error;
-      return new Set(data?.map((s) => s.place_id) ?? []);
-    },
-  });
-
-  const matchesQ = useQuery({
-    queryKey: ["matches", roomId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("matches")
-        .select("place_id, created_at, places(*)")
-        .eq("room_id", roomId)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data;
-    },
-  });
-
+  // Celebrate newly discovered matches
   useEffect(() => {
-    const channel = supabase
-      .channel(`room:${roomId}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "participants", filter: `room_id=eq.${roomId}` }, () => participantsQ.refetch())
-      .on("postgres_changes", { event: "*", schema: "public", table: "places", filter: `room_id=eq.${roomId}` }, () => placesQ.refetch())
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "matches", filter: `room_id=eq.${roomId}` }, (payload) => {
-        matchesQ.refetch();
-        const placeId = (payload.new as { place_id?: string })?.place_id;
-        const matched = placesQ.data?.find((p) => p.id === placeId);
+    for (const m of matches) {
+      if (seenMatches.current.has(m.place_id)) continue;
+      seenMatches.current.add(m.place_id);
+      if (seenMatches.current.size === matches.length && matches.length > 0 && stateQ.isFetched) {
+        const matched = places.find((p) => p.id === m.place_id);
         if (matched) {
           setMatchDialog(matched);
           confetti({ particleCount: 140, spread: 90, origin: { y: 0.3 } });
         }
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
+      }
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [roomId]);
+  }, [matches]);
 
-  const swiped = swipesQ.data ?? new Set<string>();
-  const deck = useMemo(
-    () => (placesQ.data ?? []).filter((p) => !swiped.has(p.id)),
-    [placesQ.data, swiped],
+  const swiped = useMemo(
+    () => new Set(stateQ.data?.mySwipedPlaceIds ?? []),
+    [stateQ.data?.mySwipedPlaceIds],
   );
+  const deck = useMemo(() => places.filter((p) => !swiped.has(p.id)), [places, swiped]);
+
 
   async function handleSwipe(place: Place, direction: "left" | "right") {
     if (!guestId) return;

@@ -1,9 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { joinRoom, recordSwipe } from "@/lib/rooms.functions";
+import { joinRoom, recordSwipe, getRoomState } from "@/lib/rooms.functions";
 import { getGuestId } from "@/lib/guest";
 import { CitrusMark } from "@/components/citrus-mark";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -12,6 +11,7 @@ import confetti from "canvas-confetti";
 import { motion, AnimatePresence } from "framer-motion";
 import { Copy, Heart, X, MapPin, Star, Users, PartyPopper, Share2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+
 
 export const Route = createFileRoute("/r/$roomId")({
   head: () => ({
@@ -41,113 +41,68 @@ function RoomPage() {
   const queryClient = useQueryClient();
   const joinFn = useServerFn(joinRoom);
   const swipeFn = useServerFn(recordSwipe);
+  const stateFn = useServerFn(getRoomState);
   const [guestId, setGuestId] = useState<string>("");
+  const [joined, setJoined] = useState(false);
   const [matchDialog, setMatchDialog] = useState<Place | null>(null);
+  const seenMatches = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     const id = getGuestId();
     setGuestId(id);
-    joinFn({ data: { roomId, guestId: id } }).catch(() => {});
+    joinFn({ data: { roomId, guestId: id } })
+      .catch(() => {})
+      .finally(() => setJoined(true));
   }, [roomId, joinFn]);
 
-  const roomQ = useQuery({
-    queryKey: ["room", roomId],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("rooms").select("*").eq("id", roomId).single();
-      if (error) throw error;
-      return data;
-    },
+  const stateQ = useQuery({
+    queryKey: ["roomState", roomId, guestId],
+    enabled: !!guestId && joined,
+    refetchInterval: 3000,
+    queryFn: () => stateFn({ data: { roomId, guestId } }),
   });
 
-  const participantsQ = useQuery({
-    queryKey: ["participants", roomId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("participants")
-        .select("user_id, joined_at")
-        .eq("room_id", roomId);
-      if (error) throw error;
-      return data;
-    },
-  });
+  const room = stateQ.data?.room;
+  const places = (stateQ.data?.places ?? []) as Place[];
+  const matches = stateQ.data?.matches ?? [];
+  const participantCount = stateQ.data?.participantCount ?? 0;
 
-  const placesQ = useQuery({
-    queryKey: ["places", roomId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("places")
-        .select("*")
-        .eq("room_id", roomId)
-        .order("created_at");
-      if (error) throw error;
-      return data as Place[];
-    },
-  });
-
-  const swipesQ = useQuery({
-    queryKey: ["mySwipes", roomId, guestId],
-    enabled: !!guestId,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("swipes")
-        .select("place_id")
-        .eq("room_id", roomId)
-        .eq("user_id", guestId);
-      if (error) throw error;
-      return new Set(data?.map((s) => s.place_id) ?? []);
-    },
-  });
-
-  const matchesQ = useQuery({
-    queryKey: ["matches", roomId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("matches")
-        .select("place_id, created_at, places(*)")
-        .eq("room_id", roomId)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data;
-    },
-  });
-
+  // Celebrate newly discovered matches
   useEffect(() => {
-    const channel = supabase
-      .channel(`room:${roomId}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "participants", filter: `room_id=eq.${roomId}` }, () => participantsQ.refetch())
-      .on("postgres_changes", { event: "*", schema: "public", table: "places", filter: `room_id=eq.${roomId}` }, () => placesQ.refetch())
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "matches", filter: `room_id=eq.${roomId}` }, (payload) => {
-        matchesQ.refetch();
-        const placeId = (payload.new as { place_id?: string })?.place_id;
-        const matched = placesQ.data?.find((p) => p.id === placeId);
+    for (const m of matches) {
+      if (seenMatches.current.has(m.place_id)) continue;
+      seenMatches.current.add(m.place_id);
+      if (seenMatches.current.size === matches.length && matches.length > 0 && stateQ.isFetched) {
+        const matched = places.find((p) => p.id === m.place_id);
         if (matched) {
           setMatchDialog(matched);
           confetti({ particleCount: 140, spread: 90, origin: { y: 0.3 } });
         }
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
+      }
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [roomId]);
+  }, [matches]);
 
-  const swiped = swipesQ.data ?? new Set<string>();
-  const deck = useMemo(
-    () => (placesQ.data ?? []).filter((p) => !swiped.has(p.id)),
-    [placesQ.data, swiped],
+  const swiped = useMemo(
+    () => new Set(stateQ.data?.mySwipedPlaceIds ?? []),
+    [stateQ.data?.mySwipedPlaceIds],
   );
+  const deck = useMemo(() => places.filter((p) => !swiped.has(p.id)), [places, swiped]);
+
 
   async function handleSwipe(place: Place, direction: "left" | "right") {
     if (!guestId) return;
     // Optimistic update so cards fly away instantly
-    queryClient.setQueryData<Set<string>>(
-      ["mySwipes", roomId, guestId],
-      (prev) => new Set([...(prev ?? []), place.id]),
+    queryClient.setQueryData(
+      ["roomState", roomId, guestId],
+      (prev: typeof stateQ.data) =>
+        prev ? { ...prev, mySwipedPlaceIds: [...prev.mySwipedPlaceIds, place.id] } : prev,
     );
     try {
       await swipeFn({ data: { roomId, placeId: place.id, guestId, direction } });
     } catch {
       toast.error("Swipe failed");
-      swipesQ.refetch();
+      stateQ.refetch();
     }
   }
 
@@ -162,8 +117,8 @@ function RoomPage() {
   }
 
   function copyCode() {
-    if (!roomQ.data?.code) return;
-    navigator.clipboard.writeText(roomQ.data.code);
+    if (!room?.code) return;
+    navigator.clipboard.writeText(room.code);
     toast.success("Code copied");
   }
 
@@ -188,12 +143,12 @@ function RoomPage() {
       </header>
 
       <main className="mx-auto max-w-3xl px-4 pt-6 md:pt-10">
-        {roomQ.isLoading ? (
+        {stateQ.isLoading || !joined ? (
           <div className="space-y-4">
             <Skeleton className="h-24 w-full rounded-3xl" />
             <Skeleton className="h-[420px] w-full rounded-3xl" />
           </div>
-        ) : !roomQ.data ? (
+        ) : !room ? (
           <p className="text-center text-muted-foreground">Room not found.</p>
         ) : (
           <div className="space-y-6">
@@ -202,26 +157,26 @@ function RoomPage() {
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="font-script text-xl text-accent">the room</p>
-                  <h1 className="font-serif text-3xl">{roomQ.data.name || "Untitled"}</h1>
+                  <h1 className="font-serif text-3xl">{room.name || "Untitled"}</h1>
                   <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
                     <span className="inline-flex items-center gap-1">
-                      <Users className="h-3.5 w-3.5" /> {participantsQ.data?.length ?? 0} in room
+                      <Users className="h-3.5 w-3.5" /> {participantCount} in room
                     </span>
                     <button
                       onClick={copyCode}
                       className="inline-flex items-center gap-1.5 rounded-full bg-background/50 px-3 py-1 font-mono text-xs tracking-widest backdrop-blur hover:bg-accent hover:text-accent-foreground"
                     >
-                      {roomQ.data.code} <Copy className="h-3 w-3" />
+                      {room.code} <Copy className="h-3 w-3" />
                     </button>
                   </div>
                 </div>
               </div>
 
-              {(participantsQ.data?.length ?? 0) > 0 && (
+              {participantCount > 0 && (
                 <div className="mt-4 flex -space-x-2">
-                  {participantsQ.data!.map((p, i) => (
+                  {Array.from({ length: participantCount }).map((_, i) => (
                     <div
-                      key={p.user_id}
+                      key={i}
                       className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-background bg-sunset text-xs font-semibold text-citrus-cream"
                     >
                       {String.fromCharCode(65 + (i % 26))}
@@ -232,7 +187,7 @@ function RoomPage() {
             </div>
 
             {/* Deck */}
-            {(placesQ.data?.length ?? 0) === 0 ? (
+            {places.length === 0 ? (
               <div className="glass rounded-3xl p-12 text-center">
                 <p className="font-script text-3xl text-accent">loading…</p>
                 <h3 className="mt-1 font-serif text-2xl">Fetching places</h3>
@@ -264,13 +219,13 @@ function RoomPage() {
             )}
 
             {/* Matches */}
-            {matchesQ.data && matchesQ.data.length > 0 && (
+            {matches.length > 0 && (
               <div>
                 <h2 className="font-serif text-2xl">
                   <PartyPopper className="inline h-5 w-5 text-primary" /> Matches
                 </h2>
                 <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                  {matchesQ.data.map((m) => {
+                  {matches.map((m) => {
                     const place = m.places as Place | null;
                     return (
                       <div key={m.place_id} className="glass flex gap-3 rounded-2xl p-3">

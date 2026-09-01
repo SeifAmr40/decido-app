@@ -164,3 +164,41 @@ export const recordSwipe = createServerFn({ method: "POST" })
     if (error && !error.message.includes("duplicate")) throw error;
     return { ok: true };
   });
+
+// ── getRoomState ──────────────────────────────────────────────────────────
+// All room reads go through here: the client cannot read these tables directly
+// (RLS denies it). Access requires being a participant of the room.
+export const getRoomState = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) =>
+    z.object({ roomId: z.string().uuid(), guestId: z.string().uuid() }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    const supabase = await getAdmin();
+
+    const { data: member } = await supabase
+      .from("participants")
+      .select("id")
+      .eq("room_id", data.roomId)
+      .eq("user_id", data.guestId)
+      .maybeSingle();
+    if (!member) throw new Error("Not a member of this room");
+
+    const [roomRes, participantsRes, placesRes, swipesRes, matchesRes] = await Promise.all([
+      supabase.from("rooms").select("id, code, name, category, status, created_at").eq("id", data.roomId).maybeSingle(),
+      supabase.from("participants").select("user_id, joined_at").eq("room_id", data.roomId),
+      supabase.from("places").select("id, name, address, photo_url, rating, price_level, category, google_place_id, latitude, longitude").eq("room_id", data.roomId).order("created_at"),
+      supabase.from("swipes").select("place_id").eq("room_id", data.roomId).eq("user_id", data.guestId),
+      supabase.from("matches").select("place_id, created_at, places(id, name, address, photo_url, rating, price_level, category, google_place_id, latitude, longitude)").eq("room_id", data.roomId).order("created_at", { ascending: false }),
+    ]);
+
+    if (!roomRes.data) throw new Error("Room not found");
+
+    return {
+      room: roomRes.data,
+      // Only anonymous ordinal info is needed by the UI, not raw guest identifiers.
+      participantCount: participantsRes.data?.length ?? 0,
+      places: placesRes.data ?? [],
+      mySwipedPlaceIds: (swipesRes.data ?? []).map((s) => s.place_id),
+      matches: matchesRes.data ?? [],
+    };
+  });

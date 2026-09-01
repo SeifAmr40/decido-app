@@ -11,6 +11,7 @@ import confetti from "canvas-confetti";
 import { motion, AnimatePresence } from "framer-motion";
 import { Copy, Heart, X, MapPin, Star, Users, PartyPopper, Share2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { RoomChat } from "@/components/room-chat";
 
 
 export const Route = createFileRoute("/r/$roomId")({
@@ -217,6 +218,9 @@ function RoomPage() {
                 </AnimatePresence>
               </div>
             )}
+
+            {/* Chat */}
+            {guestId && <RoomChat roomId={roomId} guestId={guestId} />}
 
             {/* Matches */}
             {matches.length > 0 && (

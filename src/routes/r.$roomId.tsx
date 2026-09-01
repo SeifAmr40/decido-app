@@ -93,15 +93,16 @@ function RoomPage() {
   async function handleSwipe(place: Place, direction: "left" | "right") {
     if (!guestId) return;
     // Optimistic update so cards fly away instantly
-    queryClient.setQueryData<Set<string>>(
-      ["mySwipes", roomId, guestId],
-      (prev) => new Set([...(prev ?? []), place.id]),
+    queryClient.setQueryData(
+      ["roomState", roomId, guestId],
+      (prev: typeof stateQ.data) =>
+        prev ? { ...prev, mySwipedPlaceIds: [...prev.mySwipedPlaceIds, place.id] } : prev,
     );
     try {
       await swipeFn({ data: { roomId, placeId: place.id, guestId, direction } });
     } catch {
       toast.error("Swipe failed");
-      swipesQ.refetch();
+      stateQ.refetch();
     }
   }
 
@@ -116,8 +117,8 @@ function RoomPage() {
   }
 
   function copyCode() {
-    if (!roomQ.data?.code) return;
-    navigator.clipboard.writeText(roomQ.data.code);
+    if (!room?.code) return;
+    navigator.clipboard.writeText(room.code);
     toast.success("Code copied");
   }
 
@@ -142,12 +143,12 @@ function RoomPage() {
       </header>
 
       <main className="mx-auto max-w-3xl px-4 pt-6 md:pt-10">
-        {roomQ.isLoading ? (
+        {stateQ.isLoading || !joined ? (
           <div className="space-y-4">
             <Skeleton className="h-24 w-full rounded-3xl" />
             <Skeleton className="h-[420px] w-full rounded-3xl" />
           </div>
-        ) : !roomQ.data ? (
+        ) : !room ? (
           <p className="text-center text-muted-foreground">Room not found.</p>
         ) : (
           <div className="space-y-6">
@@ -156,26 +157,26 @@ function RoomPage() {
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="font-script text-xl text-accent">the room</p>
-                  <h1 className="font-serif text-3xl">{roomQ.data.name || "Untitled"}</h1>
+                  <h1 className="font-serif text-3xl">{room.name || "Untitled"}</h1>
                   <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
                     <span className="inline-flex items-center gap-1">
-                      <Users className="h-3.5 w-3.5" /> {participantsQ.data?.length ?? 0} in room
+                      <Users className="h-3.5 w-3.5" /> {participantCount} in room
                     </span>
                     <button
                       onClick={copyCode}
                       className="inline-flex items-center gap-1.5 rounded-full bg-background/50 px-3 py-1 font-mono text-xs tracking-widest backdrop-blur hover:bg-accent hover:text-accent-foreground"
                     >
-                      {roomQ.data.code} <Copy className="h-3 w-3" />
+                      {room.code} <Copy className="h-3 w-3" />
                     </button>
                   </div>
                 </div>
               </div>
 
-              {(participantsQ.data?.length ?? 0) > 0 && (
+              {participantCount > 0 && (
                 <div className="mt-4 flex -space-x-2">
-                  {participantsQ.data!.map((p, i) => (
+                  {Array.from({ length: participantCount }).map((_, i) => (
                     <div
-                      key={p.user_id}
+                      key={i}
                       className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-background bg-sunset text-xs font-semibold text-citrus-cream"
                     >
                       {String.fromCharCode(65 + (i % 26))}
@@ -186,7 +187,7 @@ function RoomPage() {
             </div>
 
             {/* Deck */}
-            {(placesQ.data?.length ?? 0) === 0 ? (
+            {places.length === 0 ? (
               <div className="glass rounded-3xl p-12 text-center">
                 <p className="font-script text-3xl text-accent">loading…</p>
                 <h3 className="mt-1 font-serif text-2xl">Fetching places</h3>
@@ -218,13 +219,13 @@ function RoomPage() {
             )}
 
             {/* Matches */}
-            {matchesQ.data && matchesQ.data.length > 0 && (
+            {matches.length > 0 && (
               <div>
                 <h2 className="font-serif text-2xl">
                   <PartyPopper className="inline h-5 w-5 text-primary" /> Matches
                 </h2>
                 <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                  {matchesQ.data.map((m) => {
+                  {matches.map((m) => {
                     const place = m.places as Place | null;
                     return (
                       <div key={m.place_id} className="glass flex gap-3 rounded-2xl p-3">
